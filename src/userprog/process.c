@@ -19,7 +19,7 @@
 #include "threads/vaddr.h"
 
 static thread_func start_process NO_RETURN;
-static bool load (const char *cmdline, void (**eip) (void), void **esp);
+static bool load (const char *cmdline, void (**eip) (void), void **esp, char** save_ptr);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -199,7 +199,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp,const char* file_name, char** save_ptr);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -448,37 +448,38 @@ setup_stack (void **esp, const char* file_name, char** save_ptr)
     }
 
   char* token = (char *) file_name;
-  char** argv malloc(2 * sizeof (char *));
-  int argc = 0; size = 2; 
-  while(token!=null) {
+  char** argv = malloc(2 * sizeof (char *));
+  int argc = 0, size = 2; 
+  while(token != NULL) {
     *esp -= strlen(token) + 1;
     argv[argc] = *esp;
     argc++;
-    if (argc >= argv_size){
+   if (argc >= size){
       size *= 2;
       argv = realloc(argv, size * sizeof(char *));
     }
     memcpy(*esp, token, strlen(token)+1);
+    token = strtok_r (NULL, " ", save_ptr);
   }
   argv[argc] = 0;
   int i = (size_t) *esp % 4;
   if (i){
-    *esp = -=i;
+    *esp -= i;
     memcpy(*esp, &argv[argc], i);
   }
   for (i = argc; i >= 0; i--){
     *esp -= sizeof(char *);
-    memcpy(*esp, &argv[i], sizeOf(char *));
+    memcpy(*esp, &argv[i], sizeof(char *));
   }
   token = *esp; 
-  *esp -= sizeOf(char **);
+  *esp -= sizeof(char **);
   memcpy(*esp, &token, sizeof(char **));
   *esp -= sizeof(int);
   memcpy(*esp, &argc, sizeof(int));
-  *esp -= sizeOf(void *);
+  *esp -= sizeof(void *);
   memcpy(*esp, &argv[argc], sizeof(void *));
   free(argv);
-  
+  hex_dump(0xbfffffcc, ((uint8_t *) *esp), 50, true); 
   return success;
 }
 
