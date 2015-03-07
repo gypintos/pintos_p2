@@ -54,12 +54,16 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
+  //Get file name
+  char *save_ptr;
+  file_name = strtok_r(file_name, " ", &save_ptr);
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+  success = load (file_name, &if_.eip, &if_.esp, &save_ptr);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -206,7 +210,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (const char *file_name, void (**eip) (void), void **esp) 
+load (const char *file_name, void (**eip) (void), void **esp, char **save_ptr) 
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
@@ -302,7 +306,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (esp, file_name, save_ptr))
     goto done;
 
   /* Start address. */
@@ -427,7 +431,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, const char* file_name, char** save_ptr) 
 {
   uint8_t *kpage;
   bool success = false;
@@ -440,7 +444,41 @@ setup_stack (void **esp)
         *esp = PHYS_BASE;
       else
         palloc_free_page (kpage);
+      return success;
     }
+
+  char* token = (char *) file_name;
+  char** argv malloc(2 * sizeof (char *));
+  int argc = 0; size = 2; 
+  while(token!=null) {
+    *esp -= strlen(token) + 1;
+    argv[argc] = *esp;
+    argc++;
+    if (argc >= argv_size){
+      size *= 2;
+      argv = realloc(argv, size * sizeof(char *));
+    }
+    memcpy(*esp, token, strlen(token)+1);
+  }
+  argv[argc] = 0;
+  int i = (size_t) *esp % 4;
+  if (i){
+    *esp = -=i;
+    memcpy(*esp, &argv[argc], i);
+  }
+  for (i = argc; i >= 0; i--){
+    *esp -= sizeof(char *);
+    memcpy(*esp, &argv[i], sizeOf(char *));
+  }
+  token = *esp; 
+  *esp -= sizeOf(char **);
+  memcpy(*esp, &token, sizeof(char **));
+  *esp -= sizeof(int);
+  memcpy(*esp, &argc, sizeof(int));
+  *esp -= sizeOf(void *);
+  memcpy(*esp, &argv[argc], sizeof(void *));
+  free(argv);
+  
   return success;
 }
 
