@@ -92,6 +92,7 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+while(true){;}
   return -1;
 }
 
@@ -248,6 +249,7 @@ load (const char *file_name, void (**eip) (void), void **esp, char **save_ptr)
 
   /* Read program headers. */
   file_ofs = ehdr.e_phoff;
+  printf("ehdr.e_phum: %d",ehdr.e_phnum);
   for (i = 0; i < ehdr.e_phnum; i++) 
     {
       struct Elf32_Phdr phdr;
@@ -442,9 +444,10 @@ setup_stack (void **esp, const char* file_name, char** save_ptr)
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
         *esp = PHYS_BASE;
-      else
+      else{
         palloc_free_page (kpage);
-      return success;
+      	return success;
+      }    
     }
 
   char* token = (char *) file_name;
