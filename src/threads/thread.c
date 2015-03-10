@@ -11,9 +11,13 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
+#include <user/syscall.h>
+#include "filesys/file.h"
+#include "userprog/syscall.h"
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -172,7 +176,7 @@ thread_create (const char *name, int priority,
   struct switch_threads_frame *sf;
   tid_t tid;
 
-  enum intr_level = old_level;
+  enum intr_level old_level;
   ASSERT (function != NULL);
 
 
@@ -476,6 +480,9 @@ init_thread (struct thread *t, const char *name, int priority)
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
+  list_init(&(t->child_list));
+  list_init(&(t->file_list));
+  t->f_num = 2;
   intr_set_level (old_level);
 }
 
@@ -598,7 +605,7 @@ struct thread* thread_get_by_id(int tid)
     t = list_entry(e, struct thread, allelem);
     if (tid == t->tid)
       return t;
-    e = list_next(l);
+    e = list_next(e);
   }
   return NULL;
 }
@@ -614,7 +621,7 @@ struct child_process* create_child_process(int pid)
   cp->pid = pid;
   cp->status = 0;
   cp->load_status = NOT_LOADED;
-  cp->is_wait = false
+  cp->is_wait = false;
   cp->child_status = ALIVE;
   return cp;
 
@@ -623,7 +630,7 @@ struct child_process* create_child_process(int pid)
 struct child_process* get_child(int pid)
 {
   struct thread* curr = thread_current();
-  struct list* children = &t->child_list;
+  struct list* children = &curr->child_list;
   struct list_elem *e;
   for (e = list_begin(children); e!= list_end(children); e = list_next(e)){
     struct child_process *cp = list_entry(e,struct child_process, elem);

@@ -1,6 +1,10 @@
 #ifndef USERPROG_SYSCALL_H
 #define USERPROG_SYSCALL_H
 
+#include <user/syscall.h>
+#include "threads/interrupt.h"
+#include "threads/synch.h"
+
 struct lock filesys_lock;
 
 struct file_info {
@@ -12,13 +16,13 @@ struct file_info {
 void syscall_init (void);
 
 bool is_valid(void* vaddr);
-void* user_to_kernel(int uaddr);
+void* user_to_kernel(void* uaddr);
 void get_args(struct intr_frame *f, int *args, int n);
 
 void syscall_halt();
 void syscall_exit(int status);
-void syscall_exec(char* cmd);
-void syscall_wait(pit_t pid);
+pid_t syscall_exec(char* cmd);
+int syscall_wait(pid_t pid);
 bool syscall_create(const char* name, int init_size);
 bool syscall_remove(const char* name);
 int syscall_open(const char* name);
@@ -31,6 +35,6 @@ void syscall_close(int fid);
 
 int process_add_file(struct file* fp);
 struct file* get_file_by_id(int fid);
-bool close_file_by_id(int fid);
+void close_file_by_id(int fid);
 
 #endif /* userprog/syscall.h */

@@ -13,9 +13,10 @@ void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+  lock_init(&filesys_lock);
 }
 
-static syscall_handler (struct intr_frame *f UNUSED) 
+static void syscall_handler (struct intr_frame *f) 
 {
 	if (!is_valid(f->esp)) 
 		syscall_exit(-1);
@@ -29,12 +30,12 @@ static syscall_handler (struct intr_frame *f UNUSED)
 			break;
 		case SYS_EXIT:
 			get_args(f,args,1);
-			syscall_exit();
+			syscall_exit(args[0]);
 			break;
 		case SYS_EXEC:
 			get_args(f,args,1);
 			args[0] = user_to_kernel(args[0]);
-			f->eax = syscall_EXEC((char *) args[0]);
+			f->eax = syscall_exec((char *) args[0]);
 			break;
 		case SYS_WAIT:
 			get_args(f,args,1);
@@ -92,14 +93,14 @@ bool is_valid(void* vaddr)
 	return (is_user_vaddr(vaddr) && vaddr >= (void *) 0x08048000);
 }
 
-void* user_to_kernel(int uaddr)
+void* user_to_kernel(void* uaddr)
 {
 	void* kaddr;
 	if(!is_valid(uaddr))
-		sys_exit(-1);
+		syscall_exit(-1);
 	kaddr = pagedir_get_page(thread_current()->pagedir,uaddr);
 	if (kaddr == NULL)
-		sys_exit(-1);
+		syscall_exit(-1);
 	return kaddr;
 }
 
@@ -114,6 +115,7 @@ void get_args(struct intr_frame *f, int *args, int n)
 		if (!is_valid(ptr)) 
 			syscall_exit(-1);
 		args[i] = *ptr;
+//printf("arg%d = %d\n",i,args[i]);
 	}
 }
 
@@ -132,14 +134,14 @@ void syscall_exit(int status)
 
 	if (curr->exec_file)
 	{
-		ock_acquire(&filesys_lock);
+		lock_acquire(&filesys_lock);
 		file_close(curr->exec_file);
 		lock_release(&filesys_lock);
 	}
 	thread_exit();
 }
 
-void syscall_exec(char* cmd)
+pid_t syscall_exec(char* cmd)
 {
 	pid_t pid = process_execute(cmd);
 	struct child_process *cp = get_child(pid);
@@ -153,7 +155,7 @@ void syscall_exec(char* cmd)
 	return pid;
 }
 
-void syscall_wait(pit_t pid)
+int syscall_wait(pid_t pid)
 {
 	return process_wait(pid);
 }
@@ -213,9 +215,9 @@ int syscall_filesize(int fid)
 
 
 struct file* get_file_by_id(int fid){
-	struct list *f_list = thread_current()->file_list;
+	struct list *f_list = &thread_current()->file_list;
 	struct list_elem* e;
-	for (e = list_begin(f_list); e!=lise_end(f_list); e=list_next(e)){
+	for (e = list_begin(f_list); e!=list_end(f_list); e=list_next(e)){
 		struct file_info* file_info = list_entry(e, struct file_info, elem);
 		if (fid == file_info->fid){
 			return file_info->fp;
@@ -227,8 +229,9 @@ struct file* get_file_by_id(int fid){
 int syscall_read(int fid, void *buffer, unsigned size)
 {
 	if (fid == STDIN_FILENO){
+		int i;
 		char* buf = buffer;
-		for (int i=0; i<size; i++){
+		for (i=0; i<size; i++){
 			buf[i] = input_getc();
 		}
 		return size;
@@ -266,10 +269,10 @@ int syscall_write(int fid, const void* buffer, unsigned size)
 
 void syscall_seek(int fid, unsigned new_pos)
 {
-	lock_acquire(&file_lock);
+	lock_acquire(&filesys_lock);
 	struct file* fp = get_file_by_id(fid);
 	if (!fp){
-		lock_release(&file_lock);
+		lock_release(&filesys_lock);
 		return;
 	}
 	file_seek(fp,new_pos);
@@ -278,26 +281,26 @@ void syscall_seek(int fid, unsigned new_pos)
 
 int syscall_tell(int fid)
 {
-	lock_acquire(&file_lock);
+	lock_acquire(&filesys_lock);
 	struct file* fp = get_file_by_id(fid);
 	if (!fp){
 		lock_release(&filesys_lock);
 		return -1;
 	}
 	unsigned pos = file_tell(fp);
-	lock_release(&file_lock);
+	lock_release(&filesys_lock);
 	return pos;
 }
 
 void syscall_close(int fid)
 {
-	lock_acquire(&file_lock);
+	lock_acquire(&filesys_lock);
 	close_file_by_id(fid);
-	lock_release(&file_lock);
+	lock_release(&filesys_lock);
 }
 
 void close_file_by_id(int fid){
-	struct list* file_list = thread_current()->file_list;
+	struct list* file_list = &thread_current()->file_list;
 	struct list_elem *e;
 	for (e = list_begin(file_list); e != list_end(file_list); e = list_next(file_list)){
 		struct file_info* file_info = list_entry(e, struct file_info, elem);

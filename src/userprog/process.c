@@ -282,7 +282,6 @@ load (const char *file_name, void (**eip) (void), void **esp, char **save_ptr)
 
   /* Read program headers. */
   file_ofs = ehdr.e_phoff;
-  printf("ehdr.e_phum: %d",ehdr.e_phnum);
   for (i = 0; i < ehdr.e_phnum; i++) 
     {
       struct Elf32_Phdr phdr;
@@ -495,6 +494,7 @@ setup_stack (void **esp, const char* file_name, char** save_ptr)
       argv = realloc(argv, size * sizeof(char *));
     }
     memcpy(*esp, token, strlen(token)+1);
+    if (save_ptr == NULL) break;
     token = strtok_r (NULL, " ", save_ptr);
   }
   argv[argc] = 0;
@@ -515,7 +515,7 @@ setup_stack (void **esp, const char* file_name, char** save_ptr)
   *esp -= sizeof(void *);
   memcpy(*esp, &argv[argc], sizeof(void *));
   free(argv);
-  hex_dump(0xbfffffcc, ((uint8_t *) *esp), 50, true); 
+  //hex_dump(0xbfffffcc, ((uint8_t *) *esp), 50, true); 
   return success;
 }
 
