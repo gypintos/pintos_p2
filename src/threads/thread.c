@@ -172,7 +172,9 @@ thread_create (const char *name, int priority,
   struct switch_threads_frame *sf;
   tid_t tid;
 
+  enum intr_level = old_level;
   ASSERT (function != NULL);
+
 
   /* Allocate thread. */
   t = palloc_get_page (PAL_ZERO);
@@ -183,6 +185,7 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
+  old_level = intr_disable();
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
   kf->eip = NULL;
@@ -198,6 +201,13 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+  /* init child process */
+  struct child_process *cp = create_child_process(t->tid);
+  t->child_process = cp;
+  t->exec_file = NULL;
+  list_push_back(&thread_current()->child_list, &cp->elem);
+
+  intr_set_level(old_level);
   /* Add to run queue. */
   thread_unblock (t);
 
@@ -578,6 +588,21 @@ allocate_tid (void)
 
   return tid;
 }
+
+struct thread* thread_get_by_id(int tid)
+{
+  struct thread* t;
+  struct list* l = &all_list;
+  struct list_elem* e = list_begin(l);
+  while(e!=list_end(l)){
+    t = list_entry(e, struct thread, allelem);
+    if (tid == t->tid)
+      return t;
+    e = list_next(l);
+  }
+  return NULL;
+}
+
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */

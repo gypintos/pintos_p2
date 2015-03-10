@@ -8,6 +8,7 @@
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
+#include "userprog/syscall.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -38,10 +39,26 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+  char* ptr;
+  file_name = strtok_r(file_name, " ", &ptr);
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  
+  lock_acquire(&filesys_lock);
+  struct file* fp = filesys_open(file_name);
+  lock_release(&filesys_lock);
+  struct thread* t = thread_get_by_id(tid);
+
+  if(!fp && !t){
+    file_deny_write(fp);
+    t->exec_file = fp;
+  }
+
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
+
+
   return tid;
 }
 
@@ -63,12 +80,18 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
+  lock_acquire(&filesys_lock);
   success = load (file_name, &if_.eip, &if_.esp, &save_ptr);
+  lock_release(&filesys_lock);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
+  if (!success){
+    thread_current()->child_process->load_status = LOAD_FAIL;
     thread_exit ();
+  } else {
+    thread_current()->child_process->load_status = LOAD_SUCCESS;
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in

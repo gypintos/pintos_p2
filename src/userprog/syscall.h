@@ -1,6 +1,14 @@
 #ifndef USERPROG_SYSCALL_H
 #define USERPROG_SYSCALL_H
 
+struct lock filesys_lock;
+
+struct file_info {
+	struct file* fp;
+	int fid;
+	struct list_elem elem;
+};
+
 void syscall_init (void);
 
 bool is_valid(void* vaddr);
@@ -20,5 +28,9 @@ int syscall_write(int fid, const void* buffer, unsigned size);
 void syscall_seek(int fid, unsigned new_pos);
 int syscall_tell(int fid);
 void syscall_close(int fid);
+
+int process_add_file(struct file* fp);
+struct file* get_file_by_id(int fid);
+bool close_file_by_id(int fid);
 
 #endif /* userprog/syscall.h */
