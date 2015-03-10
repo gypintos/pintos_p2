@@ -93,6 +93,19 @@ bool is_valid(void* vaddr)
 	return (is_user_vaddr(vaddr) && vaddr >= (void *) 0x08048000);
 }
 
+void buffer_validate (void* buffer, unsigned size)
+{
+  char* buff = (char *) buffer;
+  int i;
+  for (i = 0; i < size; i++)
+    {
+      if (!is_valid((const void*) buff)){
+      	syscall_exit(-1);
+      }
+      buff++;
+    }
+}
+
 void* user_to_kernel(void* uaddr)
 {
 	void* kaddr;

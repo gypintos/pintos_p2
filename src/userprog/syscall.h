@@ -16,6 +16,7 @@ struct file_info {
 void syscall_init (void);
 
 bool is_valid(void* vaddr);
+void buffer_validate (void* buffer, unsigned size);
 void* user_to_kernel(void* uaddr);
 void get_args(struct intr_frame *f, int *args, int n);
 
