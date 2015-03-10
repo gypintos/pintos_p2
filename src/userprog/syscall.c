@@ -8,17 +8,6 @@
 #include "filesys/filesys.h"
 
 static void syscall_handler (struct intr_frame *);
-int process_add_file(struct file* fp);
-struct file* get_file_by_id(int fid);
-bool close_file_by_id(int fid);
-
-struct lock filesys_lock;
-
-strcut file_info {
-	struct file* fp;
-	int fid;
-	struct list_elem elem;
-};
 
 void
 syscall_init (void) 
@@ -28,7 +17,7 @@ syscall_init (void)
 
 static syscall_handler (struct intr_frame *f UNUSED) 
 {
-	if (!is_validated(f->esp)) 
+	if (!is_valid(f->esp)) 
 		syscall_exit(-1);
 	user_to_kernel(f->esp);
 	int syscall_int = *(int *) f->esp;
@@ -98,7 +87,7 @@ static syscall_handler (struct intr_frame *f UNUSED)
 }
 
 /* Return true if given vaddr is vadlidated */
-bool is_validated(void* vaddr)
+bool is_valid(void* vaddr)
 {
 	return (is_user_vaddr(vaddr) && vaddr >= (void *) 0x08048000);
 }
@@ -106,7 +95,7 @@ bool is_validated(void* vaddr)
 void* user_to_kernel(int uaddr)
 {
 	void* kaddr;
-	if(!is_validated(uaddr))
+	if(!is_valid(uaddr))
 		sys_exit(-1);
 	kaddr = pagedir_get_page(thread_current()->pagedir,uaddr);
 	if (kaddr == NULL)
@@ -122,7 +111,7 @@ void get_args(struct intr_frame *f, int *args, int n)
   	for (i = 0; i < n; i++)
   	{
 		ptr = (int *) f->esp + i + 1;
-		if (!is_validated(ptr)) 
+		if (!is_valid(ptr)) 
 			syscall_exit(-1);
 		args[i] = *ptr;
 	}
@@ -150,7 +139,7 @@ void syscall_exit(int status)
 	thread_exit();
 }
 
-void syscall_EXEC(char* cmd)
+void syscall_exec(char* cmd)
 {
 	pid_t pid = process_execute(cmd);
 	struct child_process *cp = get_child(pid);

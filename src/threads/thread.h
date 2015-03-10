@@ -97,10 +97,10 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                    /* Page directory. */
 
-    struct list children_list;             /* A list of children */
+    struct list child_list;                /* A list of child */
     struct child_process *child_process;   /* A child process */
 
-    int fd;                                
+    int f_num;                             /* Num of file in this thread */                    
     struct list file_list;
     struct file *exec_file;                 
 #endif
@@ -164,5 +164,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
+struct thread* thread_get_by_id(int tid);
+struct child_process* create_child_process(int pid);
+struct child_process* get_child(int pid);
 #endif /* threads/thread.h */

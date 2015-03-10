@@ -608,6 +608,17 @@ struct thread* thread_get_by_id(int tid)
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
+struct child_process* create_child_process(int pid)
+{
+  struct child_process* cp = malloc(sizeof(struct child_process));
+  cp->pid = pid;
+  cp->status = 0;
+  cp->load_status = NOT_LOADED;
+  cp->is_wait = false
+  cp->child_status = ALIVE;
+  return cp;
+
+}
 
 struct child_process* get_child(int pid)
 {
