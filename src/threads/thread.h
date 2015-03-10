@@ -102,7 +102,8 @@ struct thread
 
     int f_num;                             /* Num of file in this thread */                    
     struct list file_list;
-    struct file *exec_file;                 
+    struct file *exec_file;   
+    tid_t parrent;              
 #endif
 
     /* Owned by thread.c. */
@@ -165,6 +166,7 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 struct thread* thread_get_by_id(int tid);
+bool is_thread_alive(int pid);
 struct child_process* create_child_process(int pid);
 struct child_process* get_child(int pid);
 void remove_child(struct child_process* cp);

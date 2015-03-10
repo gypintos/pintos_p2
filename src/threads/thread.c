@@ -210,6 +210,7 @@ thread_create (const char *name, int priority,
   t->child_process = cp;
   t->exec_file = NULL;
   list_push_back(&thread_current()->child_list, &cp->elem);
+  t->parent = thread_current()->tid;
 
   intr_set_level(old_level);
   /* Add to run queue. */
@@ -483,6 +484,7 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&(t->child_list));
   list_init(&(t->file_list));
   t->f_num = 2;
+  t->parent = -1;
   intr_set_level (old_level);
 }
 
@@ -610,6 +612,15 @@ struct thread* thread_get_by_id(int tid)
   return NULL;
 }
 
+bool is_thread_alive(int pid)
+{
+  struct list_elem* e;
+  for(e=list_begin(&all_list); e!=list_end(&all_list); e=list_next(e)){
+    struct thread* t = list_entry(e,struct thread, allelem);
+    if (t->tid == pid) return true;
+  }
+  return false;
+}
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */

@@ -141,6 +141,9 @@ process_exit (void)
 
   remove_children();
 
+  if (is_thread_alive(cur->parent))
+    cur->cp->child_status = EXIT;
+  
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
