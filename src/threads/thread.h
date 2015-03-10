@@ -103,7 +103,7 @@ struct thread
     int f_num;                             /* Num of file in this thread */                    
     struct list file_list;
     struct file *exec_file;   
-    tid_t parrent;              
+    tid_t parent;              
 #endif
 
     /* Owned by thread.c. */
