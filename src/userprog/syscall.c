@@ -62,11 +62,13 @@ static void syscall_handler (struct intr_frame *f)
 			break;
 		case SYS_READ:
 			get_args(f,args,3);
+			buffer_validate((void *) arg[1], (unsigned) arg[2]);
 			args[1] = user_to_kernel(args[1]);
 			f->eax = syscall_read(args[0], (void *)args[1], (unsigned)args[2]);
 			break;
 		case SYS_WRITE:
 			get_args(f,args,3);
+			buffer_validate((void *) arg[1], (unsigned) arg[2]);
 			args[1] = user_to_kernel(args[1]);
 			f->eax = syscall_write(args[0], (void *)args[1], (unsigned)args[2]);
 			break;
