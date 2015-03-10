@@ -95,11 +95,38 @@ struct thread
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
-    uint32_t *pagedir;                  /* Page directory. */
+    uint32_t *pagedir;                    /* Page directory. */
+
+    struct list children_list;             /* A list of children */
+    struct child_process *child_process;   /* A child process */
+
+    int fd;                                
+    struct list file_list;
+    struct file *exec_file;                 
 #endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+  };
+
+/* Struct for child process */
+/* FOR child_process load_status */
+#define NOT_LOADED 0
+#define LOAD_SUCCESS 1
+#define LOAD_FAIL 2
+/* FOR child_process child_status */
+#define ALIVE 0
+#define EXIT 1
+#define KILLED 2
+
+struct child_process
+  {
+    int pid;
+    int status;
+    bool is_wait;
+    int load_status;
+    int child_status;
+    struct list_elem elem;
   };
 
 /* If false (default), use round-robin scheduler.

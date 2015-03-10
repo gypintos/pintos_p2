@@ -90,10 +90,20 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
-while(true){;}
-  return -1;
+  struct child_process *cp = get_child(child_tid);
+  if (cp == NULL || cp->is_wait){
+    return -1;
+  }
+  cp->is_wait = true;
+  while(cp->child_status == ALIVE){
+    barrier();
+  }
+  if (cp->child_status == KILLED){
+    return -1;
+  }
+  return cp->status;
 }
 
 /* Free the current process's resources. */
