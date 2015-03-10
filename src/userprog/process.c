@@ -126,6 +126,7 @@ process_wait (tid_t child_tid)
   if (cp->child_status == KILLED){
     return -1;
   }
+  remove_child(cp);
   return cp->status;
 }
 
@@ -135,6 +136,10 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
+  close_file_by_id(-1);
+
+  remove_children();
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

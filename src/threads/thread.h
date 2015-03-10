@@ -167,4 +167,6 @@ int thread_get_load_avg (void);
 struct thread* thread_get_by_id(int tid);
 struct child_process* create_child_process(int pid);
 struct child_process* get_child(int pid);
+void remove_child(struct child_process* cp);
+void remove_children(void);
 #endif /* threads/thread.h */

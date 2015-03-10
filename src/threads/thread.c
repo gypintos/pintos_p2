@@ -639,3 +639,21 @@ struct child_process* get_child(int pid)
   }
   return NULL;
 }
+
+void remove_child(struct child_process* cp)
+{
+  list_remove(&cp->elem);
+  free(cp);
+}
+
+void remove_children(void)
+{
+  struct thread* curr = thread_current();
+  struct list* children = &curr->child_list;
+  struct list_elem *e;
+  for (e = list_begin(children); e!= list_end(children); e = list_next(e)){
+    struct child_process *cp = list_entry(e,struct child_process, elem);
+    list_remove(&cp->elem);
+    free(cp);
+  } 
+}
