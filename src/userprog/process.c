@@ -140,7 +140,7 @@ process_exit (void)
 
   close_file_by_id(-1);
 
-  remove_children();
+  //remove_children();
 
   if (is_thread_alive(cur->parent))
     cur->child_process->child_status = EXIT;
