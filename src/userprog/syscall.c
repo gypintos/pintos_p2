@@ -141,8 +141,10 @@ void syscall_halt()
 void syscall_exit(int status)
 {
 	struct thread *curr = thread_current();
-	curr->child_process->status = status;
-	curr->child_process->child_status = status < 0 ? KILLED : EXIT;
+	if (is_thread_alive(curr->parent)){
+		curr->child_process->status = status;
+		curr->child_process->child_status = status < 0 ? KILLED : EXIT;
+	}
 
 	//debug
 	printf("%s: exit(%d)\n", curr->name, status);
