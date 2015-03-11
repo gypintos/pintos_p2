@@ -126,8 +126,9 @@ process_wait (tid_t child_tid)
   if (cp->child_status == KILLED){
     return -1;
   }
+  int status = cp->status;
   remove_child(cp);
-  return cp->status;
+  return status;
 }
 
 /* Free the current process's resources. */
