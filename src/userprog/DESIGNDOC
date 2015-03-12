@@ -135,11 +135,27 @@ and etc.
 >> B9: Why did you choose to implement access to user memory from the
 >> kernel in the way that you did?
 
+In this way, we make sure memory that we access is in user space and
+not pointed to kernel space.  Also, kernel will exit immediately once
+accessing invalid address.
+
 >> B10: What advantages or disadvantages can you see to your design
 >> for file descriptors?
 
+Pros:
+	Accessing and managing files of a thread is convenient, since 
+	each thread has a member point to the file list. 
+
+Cons:
+	Syschroization for the file list is easy to get wrong. To get
+	all files open in the system, we need to go through each threads
+
+
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
+
+In that way, a process can have multiple threads, which is not supported
+by pintos.
 
 			   SURVEY QUESTIONS
 			   ================
