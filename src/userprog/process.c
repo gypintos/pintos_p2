@@ -50,7 +50,7 @@ process_execute (const char *file_name)
   lock_release(&filesys_lock);
   struct thread* t = thread_get_by_id(tid);
 
-  if(!fp && !t){
+  if(fp && t){
     file_deny_write(fp);
     t->exec_file = fp;
   }
