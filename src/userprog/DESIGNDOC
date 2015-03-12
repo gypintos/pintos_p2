@@ -83,14 +83,96 @@ and etc.
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+In thread.h: 
+We add a new struct child_process to represent the children process.
+//......
+/* Struct for child process */
+/* FOR child_process load_status */
+#define NOT_LOADED 0
+#define LOAD_SUCCESS 1
+#define LOAD_FAIL 2
+/* FOR child_process child_status */
+#define ALIVE 0
+#define EXIT 1
+#define KILLED 2
+//......
+struct child_process
+  {
+    int pid;
+    int status;
+    bool is_wait;
+    int load_status;
+    int child_status;
+    struct list_elem elem;
+  };
+
+We add some members in struct thread:
+  a list of child;
+  a pointer to child_process;
+  a num of file for this thread;
+  a list of file;
+  a pointer to exec_file;
+  a id to parent thread;
+//......
+struct thread
+  {
+    /*.....*/
+#ifdef USERPROG
+    /*....*/
+    struct list child_list;                /* A list of child */
+    struct child_process *child_process;   /* A child process */
+
+    int f_num;                             /* Num of file in this thread */                    
+    struct list file_list;
+    struct file *exec_file;   
+    tid_t parent;              
+#endif
+
+    /*....*/
+    };
+
+In syscall.h:
+We add a lock to avoid racing.
+//......
+struct lock filesys_lock;
+
+We add a new struct file_info to represent the file descriptor for the file.
+//......
+struct file_info {
+	struct file* fp;
+	int fid;
+	struct list_elem elem;
+};
+
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
+
+According to our implementation, when a file is opened by a process, 
+a corresponding file descriptor which is "file_info" will be created. 
+Then we initialize the file descriptor with its file and id. and this
+file descriptor will be added to the file list of the process that 
+opens the file.
+
+File decriptor is unique within a single process. Each process has its
+own file list. 
+
 
 ---- ALGORITHMS ----
 
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
+
+We can use esp to access the user data or get a pointer to access the 
+user data. 
+In our implementation, we use  is_valid(f->esp) to check
+if the given address is in user space (the address should be under PHYS_BASE),
+then we dereference it. if it is not, we will call syscall_exit(-1) to terminate 
+process.
+We use another function user_to_kenel(f-esp) to convert the user address to
+kenel address. 
+Moreover, We modify the page_fault function in exception.c. In this way, it will
+deal with invalid pointer, and call syscall_exit(-1) to terminate.
 
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
 >> to be copied from user space into the kernel.  What is the least
@@ -99,8 +181,35 @@ and etc.
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
 
+If a system call causes a full page of data to be copied from user space
+into the kenel, there would be at least one and at most two inspections of
+the page table. We know a full page size data can be spans into two different 
+pages at most, and one at least. Moreover, two is the greatest possible number.
+
+If a system call only copy 2 bytes of data, there would be at least one
+and at most two inspections of the page table. Because, two bytes data may
+be seperated into two different pages. But one is the greatest possible
+number.
+
+There is room for the improvement. We can store the data into same page.
+But it will depends on how to predict which part of data will be accessed 
+at the same time.
+
+
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
+
+In our implementation, system call "wait" will call process_wait(pid).
+In process_wait(), first, we use pid to get the child process. If these 
+is no such child process or the child is waiting, we can return -1. 
+otherwise, we need to set child process's is_wait to true. 
+If the child's child_status is "ALIVE", we use a loop to keep the function
+checking the child_Status, and call barrier() to keep the function checking 
+the child_status. 
+If the child's child_status is "KILLED", we can just return -1. 
+Then, we store the child's child_Status first, and remove the child from 
+current process and return the status.
+
 
 >> B6: Any access to user program memory at a user-specified address
 >> can fail due to a bad pointer value.  Such accesses must cause the
@@ -115,6 +224,38 @@ and etc.
 >> allocated resources (locks, buffers, etc.) are freed?  In a few
 >> paragraphs, describe the strategy or strategies you adopted for
 >> managing these issues.  Give an example.
+
+In our implementation, at the beginning of syscall_handler(), we check 
+the address to avoid errors. We use is_valid to check the address is 
+in user adress part. otherwise, we call syscall_exit(-1) to terminate.
+We use user_to_kernel() to convert user address to kenel address. If the 
+user address is unmapped, we will call syscall_exit(-1) in page_fault() 
+to avoid this page fault and terminate the accessing. We use get_args() 
+to get the arguments for the syscall_handler. In this function, we use esp 
+pointer to get the argument's value. We check the pointer by calling 
+is_valid() to make sure the address is valid. otherwise, we call 
+syscall_exit(-1).
+
+In conclusion, is_valid() to check the address(esp pointer storing) is in
+the user meory space. user_to_kernel() to check the user address is mapped
+to kernel address and convert it. These two functions will help us get the 
+system_int. If something wrong happen, the process will exit. Then get_args() helps 
+us to get the system call arguments. If the arguments' addresses are invalid,
+the process will exit. At last, the system call's arguments are validated.
+
+When an error is detected, we will call syscall_exit() to terminate the process.
+In syscall_exit(), we update the current thread's child_process's status and 
+then close the exec_file and call thread_exit(). Here we use a lock to avoid 
+racing. 
+
+For example, In syscall_write which will access an arbitrary amount of user memory,
+we validate the buffer first to make sure the addresses are in user virtual 
+addresses by calling is_valid() or not we will call syscall_exit(). 
+
+For example, if there is a bad pointer and it will call page fault. We modify
+page_fault() to make sure it will deal with the bad pointer. and syscall_exit()
+will be called to exit process and deallocate memory.
+
 
 ---- SYNCHRONIZATION ----
 
