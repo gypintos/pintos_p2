@@ -123,12 +123,39 @@ and etc.
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
 
+In order to ensure this, we added a load_status for each process, which 
+indicate the load status for a executable file. In syshandler for exec,
+we add a while loop to check if the executable file has been loaded or 
+fail to load.
+
+The thead calls "exec" can access load_status member to check the loading
+status.
+
+
 >> B8: Consider parent process P with child process C.  How do you
 >> ensure proper synchronization and avoid race conditions when P
 >> calls wait(C) before C exits?  After C exits?  How do you ensure
 >> that all resources are freed in each case?  How about when P
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
+
+Each process has a load_status variable to indicate its running status, 
+Parent process will first check this status when calling wait. 
+
+Before C exits: child process status will ALIVE, P will be waiting in
+a while loop until the status changes.
+
+After C exits: the child process struct will be NULL, letting P know 
+that C has already exits, then P will return -1
+
+At the end of the call wait, Parent will free the space for child process.
+
+If P termiates without calling wait before C exits, C can detect this 
+by checking its parrent pointer and free all resource when it exits.
+
+If P termiates without calling wait after C exits, P will remove related
+resource for C.
+
 
 ---- RATIONALE ----
 
