@@ -524,7 +524,7 @@ setup_stack (void **esp, const char* file_name, char** save_ptr)
   *esp -= sizeof(void *);
   memcpy(*esp, &argv[argc], sizeof(void *));
   free(argv);
-  //hex_dump(0xbfffffcc, ((uint8_t *) *esp), 50, true); 
+   
   return success;
 }
 

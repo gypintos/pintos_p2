@@ -30,19 +30,49 @@ Feifei Guo <feitwo@ccs.neu.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+There is no new data structure added for argument parsing
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe how you implemented argument parsing.  How do
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
 
+For argument parssing:
+	0) changed the signature of following functions in order to
+		passing aguments to setup_stack:
+			static bool load (const char *cmdline, void (**eip) (void), 
+			                  void **esp, char** save_ptr);
+			static bool setup_stack (void **esp,const char* file_name, 
+			                   char** save_ptr);
+
+	1) In setup_stack(), first split the command line into file name and arguments, 
+	2) Then split arguments string into tokens
+		for each token:
+			Copy each token to the stack from left to right as the arguemnt order
+	3) copy the word line to stack
+	4) push the address of each argmument into statck from right to left
+	5) push number of arguemnt to stack
+	5) push fake return address to stack
+
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
 
+Calling strtok_r() may be in different threads, strtok_r supports multi-
+thread calling while strtok don't allows this situtation. In other words,
+using strtok is not thread-safe.
+
 >> A4: In Pintos, the kernel separates commands into a executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
+
+Unix-like parsing is able to validate the command before passing them 
+to the kernel, which give more protection to the kernel.
+
+It also give more flexibility to user to customize user command, such 
+as shell script to execute list of command, system environment setting 
+and etc. 
 
 			     SYSTEM CALLS
 			     ============
